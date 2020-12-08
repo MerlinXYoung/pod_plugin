@@ -76,7 +76,7 @@ bool StrStruct::DeclareStr(stringstream& ss_, const string& prefix_) const
     ss_ << prefix << GlobalVar::indent << "return true;\n";
     ss_ << prefix << "}\n";
 
-    ss_ << prefix << "inline bool To(std::string* v){\n";
+    ss_ << prefix << "inline bool To(std::string* v) const{\n";
     ss_ << prefix << GlobalVar::indent << "v->resize(count);\n";
     ss_ << prefix << GlobalVar::indent << "memcpy((void*)v->data(), (void*)data, count);\n";
     ss_ << prefix << GlobalVar::indent << "return true;\n";
@@ -133,7 +133,7 @@ bool BytesStruct::DeclareStr(stringstream& ss_, const string& prefix_) const
     ss_ << prefix << GlobalVar::indent << "return true;\n";
     ss_ << prefix << "}\n";
 
-    ss_ << prefix << "inline bool To(std::string* v){\n";
+    ss_ << prefix << "inline bool To(std::string* v) const{\n";
     ss_ << prefix << GlobalVar::indent << "v->resize(count);\n";
     ss_ << prefix << GlobalVar::indent << "memcpy((void*)v->data(), (void*)data, count);\n";
     ss_ << prefix << GlobalVar::indent << "return true;\n";
@@ -318,7 +318,7 @@ void Field::DeclareStr(stringstream& ss_, const string& prefix_, const string& p
 
         ss_ << prefix << "inline void Clear() { memset(&data[0], 0, sizeof(data));}\n";
 
-        ss_ << prefix << "inline bool To("<< pb_full_name_<<"* msg_) { \n";
+        ss_ << prefix << "inline bool To("<< pb_full_name_<<"* msg_) const{ \n";
         ss_ << prefix << GlobalVar::indent << "msg_->mutable_" << name << "()->Clear();\n";
         ss_ << prefix << GlobalVar::indent << "for (size_t i = 0; i < _capcity; ++i)\n";
         ss_ << prefix << GlobalVar::indent << "{\n";
@@ -343,7 +343,7 @@ void Field::DeclareStr(stringstream& ss_, const string& prefix_, const string& p
         if(type_message->msg_type == MSG_TYPE::SIMPLE || type_message->msg_type == MSG_TYPE::ENUM){
             ss_ << prefix << GlobalVar::indent << GlobalVar::indent << "data[i] = msg_." << name << "(i);\n";
         }
-        else{
+        else {
             ss_ << prefix << GlobalVar::indent << GlobalVar::indent << "if (!data[i].From(msg_." << name << "(i)))\n";
             ss_ << prefix << GlobalVar::indent << GlobalVar::indent << GlobalVar::indent << "return false;\n";
         }
@@ -388,7 +388,7 @@ void Field::DeclareStr(stringstream& ss_, const string& prefix_, const string& p
         ss_ << prefix << "inline void Clear() { count=0;}\n";
         
 
-        ss_ << prefix << "inline bool To("<< pb_full_name_<<"* msg_) { \n";
+        ss_ << prefix << "inline bool To("<< pb_full_name_<<"* msg_) const{ \n";
         ss_ << prefix << GlobalVar::indent << "msg_->mutable_" << name << "()->Clear();\n";
         ss_ << prefix << GlobalVar::indent << "for (size_t i = 0; i < count; ++i)\n";
         ss_ << prefix << GlobalVar::indent << "{\n";
@@ -435,11 +435,17 @@ void Field::SetPbStr(stringstream& ss_, const string& prefix_) const
 {
     assert(type_message);
     if (type_message->msg_type == MSG_TYPE::STRING || type_message->msg_type == MSG_TYPE::BYTES){
-        ss_ << prefix_ << name << ".To(msg_->mutable_" << name << "());\n";
+        if( array_len == 0)
+            ss_ << prefix_ << name << ".To(msg_->mutable_" << name << "());\n";
+        else
+            ss_ << prefix_ << name << ".To(msg_);\n";
     }
     else if (type_message->msg_type == MSG_TYPE::STRUCT)
     {
-        ss_ << prefix_ << name << ".To(msg_);\n";
+        if (array_len == 0)
+            ss_ << prefix_ << name << ".To(msg_->mutable_" << name << "());\n";
+        else
+            ss_ << prefix_ << name << ".To(msg_);\n";
     }
     else
     {
@@ -455,11 +461,21 @@ void Field::GetPbStr(stringstream& ss_, const string& prefix_) const
 {
     assert(type_message);
     if (type_message->msg_type == MSG_TYPE::STRING || type_message->msg_type == MSG_TYPE::BYTES)
-        ss_ << prefix_ << name << ".From(msg_." << name << "());\n";
+    {
+        if (array_len == 0)
+            ss_ << prefix_ << name << ".From(msg_." << name << "());\n";
+        else
+            ss_ << prefix_ << name << ".From(msg_);\n"; 
+    }
     else if (type_message->msg_type == MSG_TYPE::STRUCT)
     {
-
-        ss_ << prefix_ << name << ".From(msg_." << name << "());\n";
+        if (array_len == 0)
+            ss_ << prefix_ << name << ".From(msg_." << name << "());\n";
+        else
+        {
+            ss_ << prefix_ << name << ".From(msg_);\n"; 
+        }
+        
     }
     else
     {
