@@ -26,7 +26,7 @@ TEST(PodPluginTest, to_pb)
     pod_base_msg.id = 10;
 
     BaseMsg base_msg;
-    pod_base_msg.ToPb(&base_msg);
+    pod_base_msg.To(&base_msg);
 
     EXPECT_EQ(base_msg.id(), pod_base_msg.id);
     EXPECT_EQ(pod_base_msg.id, 10);

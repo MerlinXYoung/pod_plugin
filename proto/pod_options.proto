@@ -2,14 +2,17 @@ syntax = "proto2";
 
 import "google/protobuf/descriptor.proto";
 
-enum INT_TYPE
+enum EINT
 {
-    UINT8 = 1;
-    INT8  = 2;
-    UINT16 = 3;
-    INT16  = 4;
-}
 
+    INT8  = 0;
+    INT16  = 1;
+}
+enum EUINT
+{
+    UINT8 = 0;
+    UINT16 = 1;
+}
 extend google.protobuf.FieldOptions
 {
     // max count for repeated
@@ -17,11 +20,12 @@ extend google.protobuf.FieldOptions
     // max count for repeated fixed
     optional uint32 fixed_max_count = 30001;
     // real int type
-    optional INT_TYPE int_type = 30002;
+    optional EINT int_type = 30002;
+    optional EUINT uint_type = 30003;
     // max len of string
-    optional uint32 str_len = 30003;
+    optional uint32 size = 30004;
     // gen pod ignore this field
-    optional bool ignore = 30004 [default = false];
+    optional bool ignore = 30005 [default = false];
 }
 
 extend google.protobuf.MessageOptions

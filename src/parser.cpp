@@ -12,6 +12,7 @@
 #include "global_var.h"
 #include "pod_options.pb.h"
 
+
 using google::protobuf::Descriptor;
 using google::protobuf::FieldDescriptor;
 using std::stringstream;
@@ -51,18 +52,27 @@ enum class FIELD_TYPE : size_t
 };
 
 const BuiltInStruct *g_builtin[static_cast<size_t>(FIELD_TYPE::MAX_TYPE)] = {nullptr};
-const BuiltInStruct *real_type_message(INT_TYPE type_)
+const BuiltInStruct *real_type_message(EINT type_)
+{
+    switch (type_)
+    {
+        case INT8:
+            return g_builtin[static_cast<size_t>(FIELD_TYPE::INT8)];
+        case INT16:
+            return g_builtin[static_cast<size_t>(FIELD_TYPE::INT16)];
+        default:
+            return g_builtin[static_cast<size_t>(FIELD_TYPE::INT32)];
+    }
+}
+
+const BuiltInStruct *real_type_message(EUINT type_)
 {
     switch (type_)
     {
         case UINT8:
             return g_builtin[static_cast<size_t>(FIELD_TYPE::UINT8)];
-        case INT8:
-            return g_builtin[static_cast<size_t>(FIELD_TYPE::INT8)];
         case UINT16:
             return g_builtin[static_cast<size_t>(FIELD_TYPE::UINT16)];
-        case INT16:
-            return g_builtin[static_cast<size_t>(FIELD_TYPE::INT16)];
         default:
             return g_builtin[static_cast<size_t>(FIELD_TYPE::UINT32)];
     }
@@ -102,6 +112,7 @@ void PodMessage::CollectImportMsg(const ::google::protobuf::Descriptor *desc_, c
 
     std::unique_ptr<BaseMessageStruct> m(new BaseMessageStruct);
     m->name = GlobalVar::message_prefix + desc_->name();
+    // m->name = desc_->name();
     m->msg_type = MSG_TYPE::STRUCT;
 
     if (parent_)
@@ -154,7 +165,7 @@ void PodMessage::InitBaseMessage()
     g_builtin[static_cast<size_t>(FIELD_TYPE::FLOAT)] = new BuiltInStruct("float", "float");
     g_builtin[static_cast<size_t>(FIELD_TYPE::DOUBLE)] = new BuiltInStruct("double", "double");
     g_builtin[static_cast<size_t>(FIELD_TYPE::BOOL)] = new BuiltInStruct("bool", "bool");
-    g_builtin[static_cast<size_t>(FIELD_TYPE::CHAR)] = new BuiltInStruct("char", "char", MSG_TYPE::STRING);
+    g_builtin[static_cast<size_t>(FIELD_TYPE::CHAR)] = nullptr;//new BuiltInStruct("char", "char", MSG_TYPE::STRING);
     g_builtin[static_cast<size_t>(FIELD_TYPE::ENUM)] = nullptr;
     g_builtin[static_cast<size_t>(FIELD_TYPE::STRUCT)] = nullptr;
 }
@@ -230,6 +241,7 @@ MessageStruct *PodMessage::ParseMessage(const Descriptor *desc_, const MessageSt
 
     std::unique_ptr<MessageStruct> m(new MessageStruct);
     m->name = GlobalVar::message_prefix + desc_->name();
+    // m->name = desc_->name();
 
     auto parent_desc = desc_->containing_type();
     if ((parent_desc && !parent_) || (!parent_desc && parent_))
@@ -327,8 +339,8 @@ Field *PodMessage::ParseField(const FieldDescriptor *desc_)
         }
         case FieldDescriptor::CPPTYPE_UINT32:
         {
-            if (desc_->options().HasExtension(int_type))
-                f->type_message = real_type_message(desc_->options().GetExtension(int_type));
+            if (desc_->options().HasExtension(uint_type))
+                f->type_message = real_type_message(desc_->options().GetExtension(uint_type));
             else
                 f->type_message = g_builtin[static_cast<size_t>(FIELD_TYPE::UINT32)];
             f->default_value = std::to_string(desc_->default_value_uint32());
@@ -336,8 +348,8 @@ Field *PodMessage::ParseField(const FieldDescriptor *desc_)
         }
         case FieldDescriptor::CPPTYPE_UINT64:
         {
-            if (desc_->options().HasExtension(int_type))
-                f->type_message = real_type_message(desc_->options().GetExtension(int_type));
+            if (desc_->options().HasExtension(uint_type))
+                f->type_message = real_type_message(desc_->options().GetExtension(uint_type));
             else
                 f->type_message = g_builtin[static_cast<size_t>(FIELD_TYPE::UINT64)];
             f->default_value = std::to_string(desc_->default_value_uint64());
@@ -363,27 +375,38 @@ Field *PodMessage::ParseField(const FieldDescriptor *desc_)
         }
         case FieldDescriptor::CPPTYPE_STRING:
         {
-            // string cannot repeated
-            if (desc_->is_repeated())
+            size_t len = desc_->options().HasExtension(size)?
+                desc_->options().GetExtension(size):1;
+
+            if (desc_->default_value_string().size() + 1 > len)
             {
-                m_err_msg += ("string can not be repeated\n");
+                m_err_msg += ("len of string default value longer than size\n");
                 return nullptr;
             }
-
-            if (desc_->options().HasExtension(str_len))
-                f->len = desc_->options().GetExtension(str_len);
+            std::string name ;
+            if( desc_->type() == FieldDescriptor::TYPE_BYTES)
+                name = "bytes_"+desc_->name();
             else
-                f->len = 1;
+                name = "str_"+desc_->name();
 
-            if (desc_->default_value_string().size() + 1 > f->len)
+
+            auto full_name = desc_->full_name()+"::"+ name;
+
+            std::unique_ptr<BaseStrStruct> e;
+            if(desc_->type() == FieldDescriptor::TYPE_BYTES)
+                e.reset(new BytesStruct(name, full_name, len, desc_->default_value_string()));
+            else
+                e.reset(new StrStruct(name, full_name, len, desc_->default_value_string()));
+
+
+            if (!(m_message_mgr.insert(std::make_pair(full_name, e.get())).second))
             {
-                m_err_msg += ("len of string default value longer than str_len\n");
+                m_err_msg += (full_name + " is not uniq, ERROR\n");
                 return nullptr;
             }
-
-            f->fixed_len = true;
-            f->type_message = g_builtin[static_cast<size_t>(FIELD_TYPE::CHAR)];
-            f->default_value = desc_->default_value_string();
+            
+            f->type_message = e.release();
+            // f->default_value = desc_->default_value_string();
 
             break;
         }
@@ -437,13 +460,13 @@ Field *PodMessage::ParseField(const FieldDescriptor *desc_)
     {
         if (desc_->options().HasExtension(max_count))
         {
-            f->len = desc_->options().GetExtension(max_count);
-            f->fixed_len = false;
+            f->array_len = desc_->options().GetExtension(max_count);
+            f->array_fixed_len = false;
         }
         else if (desc_->options().HasExtension(fixed_max_count))
         {
-            f->len = desc_->options().GetExtension(fixed_max_count);
-            f->fixed_len = true;
+            f->array_len = desc_->options().GetExtension(fixed_max_count);
+            f->array_fixed_len = true;
         }
     }
 
@@ -517,8 +540,10 @@ string PodMessage::GetHeaderDecl() const
 {
     stringstream ss;
     ss << "namespace " << m_tree.space << "\n{\n";
+    // ss << "namespace pod\n{\n";
     for (auto message : m_tree.root)
         message->DeclareStr(ss, "");
+    // ss << "\n} // namespace pod";
     ss << "\n} // namespace " << m_tree.space << "\n";
     return ss.str();
 }
@@ -544,8 +569,10 @@ string PodMessage::GetSourceImpl() const
 {
     stringstream ss;
     ss << "namespace " << m_tree.space << "\n{\n";
+    // ss << "namespace pod\n{\n";
     for (auto message : m_tree.root)
         message->ImplStr(ss, "");
+    // ss << "\n} // namespace pod";
     ss << "\n} // namespace " << m_tree.space << "\n";
     return ss.str();
 }

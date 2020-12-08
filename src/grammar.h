@@ -25,6 +25,7 @@ enum class MSG_TYPE : uint8_t
     STRING = 1,
     STRUCT = 2,
     ENUM = 3,
+    BYTES = 4,
 };
 
 struct BaseStruct
@@ -55,6 +56,7 @@ struct BuiltInStruct : public BaseStruct
     virtual bool ImplStr(stringstream& ss_, const string& prefix_) const final { return false; };
 };
 
+
 struct BaseMessageStruct;
 struct EnumStruct : public BaseStruct
 {
@@ -74,6 +76,43 @@ struct BaseMessageStruct : public BaseStruct
     virtual ~BaseMessageStruct() = default;
     virtual bool DeclareStr(stringstream& ss_, const string& prefix_) const override { return false; }
     virtual bool ImplStr(stringstream& ss_, const string& prefix_) const override { return false; }
+};
+
+struct BaseStrStruct : public BaseStruct
+{
+    
+    size_t len = 1;
+    string default_value;
+
+    BaseStrStruct(const string& name_, const string& full_name_, size_t _len, 
+        const string& _default_value,  MSG_TYPE type_) 
+        : BaseStruct(name_, full_name_, type_), len(_len), default_value(_default_value)
+         {}
+
+    virtual ~BaseStrStruct() = default;
+    virtual bool DeclareStr(stringstream& ss_, const string& prefix_) const override { return false; }
+    virtual bool ImplStr(stringstream& ss_, const string& prefix_) const override { return false; }
+};
+
+struct StrStruct : public BaseStrStruct
+{
+    
+    StrStruct(const string& name_, const string& full_name_, size_t _len, 
+        const string& _default_value) 
+        : BaseStrStruct(name_, full_name_, _len, _default_value, MSG_TYPE::STRING){}
+    virtual ~StrStruct() = default;
+    virtual bool DeclareStr(stringstream& ss_, const string& prefix_) const final ;
+    virtual bool ImplStr(stringstream& ss_, const string& prefix_) const final {return true;}
+};
+
+struct BytesStruct : public BaseStrStruct
+{
+    BytesStruct(const string& name_, const string& full_name_, size_t _len, 
+        const string& _default_value) 
+        : BaseStrStruct(name_, full_name_, _len, _default_value, MSG_TYPE::BYTES){}
+    virtual ~BytesStruct() = default;
+    virtual bool DeclareStr(stringstream& ss_, const string& prefix_) const final ;
+    virtual bool ImplStr(stringstream& ss_, const string& prefix_) const final {return true;}
 };
 
 struct Field;
@@ -116,38 +155,21 @@ struct Field
 {
     string name;
     string default_value;
-    size_t len = 0;
-    bool fixed_len = false;
     const BaseStruct* type_message = nullptr;
+    
+    size_t len = 0;
+    
+    size_t array_len = 0;
+    bool array_fixed_len = false;
 
-    void DeclareStr(stringstream& ss_, const string& prefix_) const;
+    void DeclareStr(stringstream& ss_, const string& prefix_, const string& pb_full_name_) const;
 
     void SetPbStr(stringstream& ss_, const string& prefix_) const;
-    void SetSingleVarStr(stringstream& ss_, const string& prefix_) const;
-    void SetSingleMessageStr(stringstream& ss_, const string& prefix_) const;
-    void SetArrayVarStr(stringstream& ss_, const string& prefix_) const;
-    void SetFixedArrayVarStr(stringstream& ss_, const string& prefix_) const;
-    void SetArrayMessageStr(stringstream& ss_, const string& prefix_) const;
-    void SetFixedArrayMessageStr(stringstream& ss_, const string& prefix_) const;
-    void SetStringStr(stringstream& ss_, const string& prefix_) const;
 
     void GetPbStr(stringstream& ss_, const string& prefix_) const;
-    void GetSingleVarStr(stringstream& ss_, const string& prefix_) const;
-    void GetSingleMessageStr(stringstream& ss_, const string& prefix_) const;
-    void GetArrayVarStr(stringstream& ss_, const string& prefix_) const;
-    void GetFixedArrayVarStr(stringstream& ss_, const string& prefix_) const;
-    void GetArrayMessageStr(stringstream& ss_, const string& prefix_) const;
-    void GetFixedArrayMessageStr(stringstream& ss_, const string& prefix_) const;
-    void GetStringStr(stringstream& ss_, const string& prefix_) const;
 
     void InitStr(stringstream& ss_, const string& prefix_) const;
-    void InitSingleVarStr(stringstream& ss_, const string& prefix_) const;
-    void InitSingleMessageStr(stringstream& ss_, const string& prefix_) const;
-    void InitArrayVarStr(stringstream& ss_, const string& prefix_) const;
-    void InitFixedArrayVarStr(stringstream& ss_, const string& prefix_) const;
-    void InitArrayMessageStr(stringstream& ss_, const string& prefix_) const;
-    void InitFixedArrayMessageStr(stringstream& ss_, const string& prefix_) const;
-    void InitStringStr(stringstream& ss_, const string& prefix_) const;
+
 };
 
 struct SyntaxTree

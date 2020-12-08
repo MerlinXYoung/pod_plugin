@@ -28,28 +28,42 @@ message BaseMsg
     }
 
     option (gen_pod) = true;
-    required uint64 id = 1 [(int_type) = UINT16, default = 100];
-    optional int64 id_without_default = 2;
+    required uint64 uid = 1 [default = 100];
+    optional int64 uid_without_default = 2;
 
-    optional bool is_value = 3 [default = true];
-    optional bool is_without_default = 4;
+    required uint32 id = 3 [(uint_type)=UINT8, default = 100];
+    optional int32 id_without_default = 4;
 
-    optional double float_num = 5 [default = 1.0];
-    optional double float_num_without_default = 6;
+    optional bool is_value = 5 [default = true];
+    optional bool is_without_default = 6;
 
-    repeated uint32 indexs = 7 [(int_type) = INT8, (max_count) = 10];
-    repeated uint32 fixed_indexs = 8 [(int_type) = INT16, (fixed_max_count) = 5];
+    optional double float_num = 7 [default = 1.0];
+    optional double float_num_without_default = 8;
 
-    optional string str = 9 [(str_len) = 10, default = "hello"];
-    optional string str_without_default = 10;
+    repeated int32 indexs = 9 [(int_type) = INT8, (max_count) = 10];
+    repeated int32 fixed_indexs = 10 [(int_type) = INT16, (fixed_max_count) = 5];
 
-    repeated NestedMsg fixed_nested_msg = 11 [(fixed_max_count) = 5];
-    repeated NestedMsg unfixed_nested_msg = 12 [(max_count) = 5];
+    optional string str = 11 [(size) = 10, default = "hello"];
+    optional string str_without_default = 12;
 
-    optional RootEnum root_enum = 13 [default = ROOT_TWO];
-    optional NestedMsg.NestedEnum nested_enum = 14 [default = NESTED_TWO];
-    optional NestedMsg.NestedEnum nested_enum_without_defalut = 15;
-    optional uint32 ignore_test = 16 [(ignore) = true];
-    optional ParentMsg parent_test = 17;
-    optional ParentMsg.ParentNestedEnum parent_enum_test = 18;
+    repeated NestedMsg fixed_nested_msg = 13 [(fixed_max_count) = 5];
+    repeated NestedMsg unfixed_nested_msg = 14 [(max_count) = 5];
+
+    optional RootEnum root_enum = 15 [default = ROOT_TWO];
+    optional NestedMsg.NestedEnum nested_enum = 16 [default = NESTED_TWO];
+    optional NestedMsg.NestedEnum nested_enum_without_defalut = 17;
+    optional uint32 ignore_test = 18 [(ignore) = true];
+    optional ParentMsg parent_test = 19;
+    optional ParentMsg.ParentNestedEnum parent_enum_test = 20;
+
+    repeated string names=21[(max_count)=6];
+    repeated string desc=22[(fixed_max_count)=2];
+
+    optional bytes bs = 23 [(size) = 10, default = "hello"];
+    optional bytes bs_without_default = 24;
+
+    repeated bytes abs=25[(max_count)=6];
+    repeated bytes fbs=26[(fixed_max_count)=2];
+
+
 }
