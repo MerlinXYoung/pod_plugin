@@ -368,7 +368,7 @@ void Field::DeclareStr(stringstream& ss_, const string& prefix_, const string& p
     }
     if(array_fixed_len)
     {
-        auto aname = "fixed_array_"+name;
+        auto aname = "fixed_"+name;
         ss_ << prefix_ << "struct " << aname << "\n" << prefix_ << "{\n";
         string max_len_name = "_capcity";
         auto prefix = prefix_ + GlobalVar::indent;
@@ -537,7 +537,7 @@ void Field::ImplStr(stringstream& ss_, const string& prefix_, const string& pb_f
 
     if( array_fixed_len)
     {
-        auto aname = "fixed_array_"+name;
+        auto aname = "fixed_"+name;
 
         auto prefix = prefix_ + GlobalVar::indent;
         auto type = _get_type(array_len);
