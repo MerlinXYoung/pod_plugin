@@ -392,11 +392,22 @@ Field *PodMessage::ParseField(const FieldDescriptor *desc_)
 
             auto full_name = desc_->full_name()+"::"+ name;
 
+            auto pos = desc_->full_name().find_last_of('.');
+            std::string msg_name; 
+            if(pos != std::string::npos)
+            {
+                msg_name= desc_->full_name().substr(0,pos);
+                pos = msg_name.find_last_of('.');
+                if(pos != std::string::npos)
+                    msg_name= msg_name.substr(pos+1);
+                msg_name= GlobalVar::message_prefix+msg_name;
+            }
+
             std::unique_ptr<BaseStrStruct> e;
             if(desc_->type() == FieldDescriptor::TYPE_BYTES)
-                e.reset(new BytesStruct(name, full_name, len, desc_->default_value_string()));
+                e.reset(new BytesStruct(name, msg_name+"::"+ name, len, desc_->default_value_string()));
             else
-                e.reset(new StrStruct(name, full_name, len, desc_->default_value_string()));
+                e.reset(new StrStruct(name, msg_name+"::"+ name, len, desc_->default_value_string()));
 
 
             if (!(m_message_mgr.insert(std::make_pair(full_name, e.get())).second))
@@ -562,7 +573,7 @@ string PodMessage::GetSourcePrologue() const
 string PodMessage::GetSourceIncludeFile() const
 {
     return string("\n#include <cstring>\n#include <string>\n#include <algorithm>\n#include \"") + m_base_file_name +
-           ".pod.h\"\n\n";
+           ".pod.h\"\n\n";//+ "#include \"" + m_base_file_name + ".pb.h\"\n";
 }
 
 string PodMessage::GetSourceImpl() const

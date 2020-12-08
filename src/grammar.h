@@ -102,7 +102,7 @@ struct StrStruct : public BaseStrStruct
         : BaseStrStruct(name_, full_name_, _len, _default_value, MSG_TYPE::STRING){}
     virtual ~StrStruct() = default;
     virtual bool DeclareStr(stringstream& ss_, const string& prefix_) const final ;
-    virtual bool ImplStr(stringstream& ss_, const string& prefix_) const final {return true;}
+    virtual bool ImplStr(stringstream& ss_, const string& prefix_) const final;
 };
 
 struct BytesStruct : public BaseStrStruct
@@ -112,7 +112,7 @@ struct BytesStruct : public BaseStrStruct
         : BaseStrStruct(name_, full_name_, _len, _default_value, MSG_TYPE::BYTES){}
     virtual ~BytesStruct() = default;
     virtual bool DeclareStr(stringstream& ss_, const string& prefix_) const final ;
-    virtual bool ImplStr(stringstream& ss_, const string& prefix_) const final {return true;}
+    virtual bool ImplStr(stringstream& ss_, const string& prefix_) const final ;
 };
 
 struct Field;
@@ -163,6 +163,8 @@ struct Field
     bool array_fixed_len = false;
 
     void DeclareStr(stringstream& ss_, const string& prefix_, const string& pb_full_name_) const;
+
+    void ImplStr(stringstream& ss_, const string& prefix_, const string& pb_full_name_) const;
 
     void SetPbStr(stringstream& ss_, const string& prefix_) const;
 

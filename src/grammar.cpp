@@ -53,7 +53,13 @@ bool StrStruct::DeclareStr(stringstream& ss_, const string& prefix_) const
             ss_ << prefix << "char data" << "[" << max_len_name << "+1] = \""
                 << default_value << "\";\n";
     }
-
+#if 1
+    ss_ << prefix << "inline void Reset();\n";
+    ss_ << prefix << "inline void Clear() { count=0;}\n";
+    ss_ << prefix << "inline bool From(const std::string& v);\n";
+    ss_ << prefix << "inline bool To(std::string* v) const;\n";
+    
+#else
     ss_ << prefix << "inline void Reset() {\n";
     ss_ << prefix << GlobalVar::indent << "count = " << default_value.size() << ";\n";
     if (default_value.empty())
@@ -81,11 +87,44 @@ bool StrStruct::DeclareStr(stringstream& ss_, const string& prefix_) const
     ss_ << prefix << GlobalVar::indent << "memcpy((void*)v->data(), (void*)data, count);\n";
     ss_ << prefix << GlobalVar::indent << "return true;\n";
     ss_ << prefix << "}\n";
-
+#endif
     ss_ << prefix_ << "};\n";
 
     return true;
     
+}
+bool StrStruct::ImplStr(stringstream& ss_, const string& prefix_) const
+{
+    auto prefix = prefix_+ GlobalVar::indent;
+    ss_ << prefix << "inline void "<< full_name << "::Reset() {\n";
+    ss_ << prefix << GlobalVar::indent << "count = " << default_value.size() << ";\n";
+    if (default_value.empty())
+    {
+        ss_ << prefix << GlobalVar::indent << "data[0] = '\\0';\n";
+    }
+    else
+    {
+        ss_ << prefix << GlobalVar::indent << "strncpy(&" << "data[0], \"" << default_value << "\", "<< default_value.size() << ");\n";
+        ss_ << prefix << GlobalVar::indent << "data[count]=0;\n";
+    }
+    ss_ << prefix << "}\n";
+
+    // ss_ << prefix << "inline void Clear() { count=0;}\n";
+
+    ss_ << prefix << "inline bool "<< full_name << "::From(const std::string& v){\n";
+    ss_ << prefix << GlobalVar::indent << "count = v.size()<_capcity?v.size():_capcity;\n";
+    ss_ << prefix << GlobalVar::indent << "strncpy(&data[0], v.data(), count);\n";
+    ss_ << prefix << GlobalVar::indent << "data[count]='\\0';\n";
+    ss_ << prefix << GlobalVar::indent << "return true;\n";
+    ss_ << prefix << "}\n";
+
+    ss_ << prefix << "inline bool "<< full_name << "::To(std::string* v) const{\n";
+    ss_ << prefix << GlobalVar::indent << "v->resize(count);\n";
+    ss_ << prefix << GlobalVar::indent << "memcpy((void*)v->data(), (void*)data, count);\n";
+    ss_ << prefix << GlobalVar::indent << "return true;\n";
+    ss_ << prefix << "}\n";
+
+    return true;
 }
 
 bool BytesStruct::DeclareStr(stringstream& ss_, const string& prefix_) const
@@ -112,7 +151,13 @@ bool BytesStruct::DeclareStr(stringstream& ss_, const string& prefix_) const
             ss_ << prefix << "char data" << "[" << max_len_name << "+1] = \""
                 << default_value << "\";\n";
     }
-
+#if 1
+    ss_ << prefix << "inline void Reset();\n";
+    ss_ << prefix << "inline void Clear() { count=0;}\n";
+    ss_ << prefix << "inline bool From(const std::string& v);\n";
+    ss_ << prefix << "inline bool To(std::string* v) const;\n";
+    
+#else
     ss_ << prefix << "inline void Reset() {\n";
     ss_ << prefix << GlobalVar::indent << "count = " << default_value.size() << ";\n";
     if (default_value.empty())
@@ -138,13 +183,45 @@ bool BytesStruct::DeclareStr(stringstream& ss_, const string& prefix_) const
     ss_ << prefix << GlobalVar::indent << "memcpy((void*)v->data(), (void*)data, count);\n";
     ss_ << prefix << GlobalVar::indent << "return true;\n";
     ss_ << prefix << "}\n";
-
-    
+#endif
 
     ss_ << prefix_ << "};\n";
 
     return true;
     
+}
+
+bool BytesStruct::ImplStr(stringstream& ss_, const string& prefix_) const{
+
+    auto prefix = prefix_+ GlobalVar::indent;
+
+    ss_ << prefix << "inline void "<< full_name << "::Reset() {\n";
+    ss_ << prefix << GlobalVar::indent << "count = " << default_value.size() << ";\n";
+    if (default_value.empty())
+    {
+        ss_ << prefix << GlobalVar::indent << "memset(data, 0, sizeof(data));\n";
+    }
+    else
+    {
+        ss_ << prefix << GlobalVar::indent << "memcpy(&" << "data[0], \"" << default_value << "\", "<< default_value.size() << ");\n";
+    }
+    ss_ << prefix << "};\n";
+
+    // ss_ << prefix << "inline void Clear() { count=0;}\n";
+
+    ss_ << prefix << "inline bool "<< full_name << "::From(const std::string& v){\n";
+    ss_ << prefix << GlobalVar::indent << "count = v.size()<_capcity?v.size():_capcity;\n";
+    ss_ << prefix << GlobalVar::indent << "memcpy((void*)&data[0], (void*)v.data(), count);\n";
+    ss_ << prefix << GlobalVar::indent << "return true;\n";
+    ss_ << prefix << "}\n";
+
+    ss_ << prefix << "inline bool "<< full_name << "::To(std::string* v) const{\n";
+    ss_ << prefix << GlobalVar::indent << "v->resize(count);\n";
+    ss_ << prefix << GlobalVar::indent << "memcpy((void*)v->data(), (void*)data, count);\n";
+    ss_ << prefix << GlobalVar::indent << "return true;\n";
+    ss_ << prefix << "}\n";
+
+    return true;
 }
 
 bool MessageStruct::DeclareStr(stringstream& ss_, const string& prefix_) const
@@ -204,6 +281,11 @@ bool MessageStruct::ImplStr(stringstream& ss_, const string& prefix_) const
     {
         if (child->ImplStr(ss_, prefix_))
             ss_ << "\n";
+    }
+
+    for (auto field : fields){
+
+        field->ImplStr(ss_, prefix_ + GlobalVar::indent, full_name);
     }
 
     if (GlobalVar::standard == CPP_STANDARD::CPP_98)
@@ -284,7 +366,7 @@ void Field::DeclareStr(stringstream& ss_, const string& prefix_, const string& p
         
         return;
     }
-    if( array_fixed_len)
+    if(array_fixed_len)
     {
         auto aname = "fixed_array_"+name;
         ss_ << prefix_ << "struct " << aname << "\n" << prefix_ << "{\n";
@@ -305,7 +387,13 @@ void Field::DeclareStr(stringstream& ss_, const string& prefix_, const string& p
                     << default_value << "};\n";
             
         }
-
+#if 1
+        ss_ << prefix << "void Reset();\n";
+        ss_ << prefix << "void Clear();\n";
+        ss_ << prefix << "bool To("<< pb_full_name_<<"* msg_) const;\n";
+        ss_ << prefix << "bool From(const "<< pb_full_name_<<"& msg_);\n";
+        ss_ << prefix_ << "};\n";
+#else
         ss_ << prefix << "inline void Reset() {\n";
         if(type_message->msg_type == MSG_TYPE::SIMPLE || type_message->msg_type == MSG_TYPE::ENUM)
             ss_ << prefix << GlobalVar::indent << "memset(&data[0], 0, sizeof(data));\n";
@@ -353,8 +441,9 @@ void Field::DeclareStr(stringstream& ss_, const string& prefix_, const string& p
         ss_ << prefix << "}\n";
 
         ss_ << prefix_ << "};\n";
-
+#endif
         ss_ << prefix_ << aname << " "<< name <<";\n";
+
     }
     else{
         auto aname = "array_"+name;
@@ -383,11 +472,13 @@ void Field::DeclareStr(stringstream& ss_, const string& prefix_, const string& p
                     << default_value << "};\n";
             
         }
-
+#if 1
         ss_ << prefix << "inline void Reset() { count=0;}\n";
         ss_ << prefix << "inline void Clear() { count=0;}\n";
-        
-
+        ss_ << prefix << "bool To("<< pb_full_name_<<"* msg_) const;\n";
+        ss_ << prefix << "bool From(const "<< pb_full_name_<<"& msg_);\n";
+        ss_ << prefix_ << "};\n";
+#else
         ss_ << prefix << "inline bool To("<< pb_full_name_<<"* msg_) const{ \n";
         ss_ << prefix << GlobalVar::indent << "msg_->mutable_" << name << "()->Clear();\n";
         ss_ << prefix << GlobalVar::indent << "for (size_t i = 0; i < count; ++i)\n";
@@ -426,8 +517,124 @@ void Field::DeclareStr(stringstream& ss_, const string& prefix_, const string& p
         ss_ << prefix << "}\n";
 
         ss_ << prefix_ << "};\n";
-
+#endif
         ss_ << prefix_ << aname << " "<< name <<";\n";
+    }
+
+}
+
+void Field::ImplStr(stringstream& ss_, const string& prefix_, const string& pb_full_name_) const
+{
+    assert(type_message);
+    //not repeated
+    if(type_message->msg_type == MSG_TYPE::STRING || type_message->msg_type == MSG_TYPE::BYTES )
+    {
+        type_message->ImplStr(ss_, prefix_);
+
+    }
+    if(array_len == 0 )
+        return;
+
+    if( array_fixed_len)
+    {
+        auto aname = "fixed_array_"+name;
+
+        auto prefix = prefix_ + GlobalVar::indent;
+        auto type = _get_type(array_len);
+
+        ss_ << prefix << "inline void " << pb_full_name_ << "::" <<aname << "::Reset() {\n";
+        if(type_message->msg_type == MSG_TYPE::SIMPLE || type_message->msg_type == MSG_TYPE::ENUM)
+            ss_ << prefix << GlobalVar::indent << "memset(&data[0], 0, sizeof(data));\n";
+        else{
+            ss_ << prefix << GlobalVar::indent << "for(size_t i = 0; i < _capcity; ++i){\n";
+            ss_ << prefix << GlobalVar::indent << GlobalVar::indent << "data[i].Reset();\n";
+            ss_ << prefix << GlobalVar::indent << "}\n";
+        }
+        ss_ << prefix << "}\n";
+
+        ss_ << prefix << "inline void " << pb_full_name_ << "::" <<aname << "::Clear() { memset(&data[0], 0, sizeof(data));}\n";
+
+        ss_ << prefix << "inline bool " << pb_full_name_ << "::" <<aname << "::To("<< pb_full_name_.substr(3)<<"* msg_) const{ \n";
+        ss_ << prefix << GlobalVar::indent << "msg_->mutable_" << name << "()->Clear();\n";
+        ss_ << prefix << GlobalVar::indent << "for (size_t i = 0; i < _capcity; ++i)\n";
+        ss_ << prefix << GlobalVar::indent << "{\n";
+        if(type_message->msg_type == MSG_TYPE::SIMPLE || type_message->msg_type == MSG_TYPE::ENUM){
+            ss_ << prefix << GlobalVar::indent << GlobalVar::indent << "msg_->add_" << name << "(data[i]);\n";
+        }
+        else{
+            ss_ << prefix << GlobalVar::indent << GlobalVar::indent << "if (!(data[i].To(msg_->mutable_" << name << "()->Add())"
+                << "))\n";
+            ss_ << prefix << GlobalVar::indent << GlobalVar::indent << GlobalVar::indent << "return false;\n";
+        }
+        ss_ << prefix << GlobalVar::indent << "}\n";
+        ss_ << prefix << GlobalVar::indent << "return true;\n";
+        ss_ << prefix << "}\n";
+
+        ss_ << prefix << "inline bool " << pb_full_name_ << "::" <<aname << "::From(const "<< pb_full_name_.substr(3)<<"& msg_) { \n";
+        ss_ << prefix << GlobalVar::indent << "size_t count = msg_." << name << "_size();\n";
+        ss_ << prefix << GlobalVar::indent << "if (count > _capcity)\n";
+        ss_ << prefix << GlobalVar::indent << GlobalVar::indent << "count = _capcity;\n";
+        ss_ << prefix << GlobalVar::indent << "for (size_t i = 0; i < count; ++i)\n";
+        ss_ << prefix << GlobalVar::indent << "{\n";
+        if(type_message->msg_type == MSG_TYPE::SIMPLE || type_message->msg_type == MSG_TYPE::ENUM){
+            ss_ << prefix << GlobalVar::indent << GlobalVar::indent << "data[i] = msg_." << name << "(i);\n";
+        }
+        else {
+            ss_ << prefix << GlobalVar::indent << GlobalVar::indent << "if (!data[i].From(msg_." << name << "(i)))\n";
+            ss_ << prefix << GlobalVar::indent << GlobalVar::indent << GlobalVar::indent << "return false;\n";
+        }
+        ss_ << prefix << GlobalVar::indent  << "}\n";
+        ss_ << prefix << GlobalVar::indent << "return true;\n";
+        
+        ss_ << prefix << "}\n";
+
+    }
+    else{
+        auto aname = "array_"+name;
+        
+        auto prefix = prefix_ + GlobalVar::indent;
+        auto type = _get_type(array_len);
+
+        // ss_ << prefix << "inline void " << pb_full_name_ << "::" <<aname << "::Reset() { count=0;}\n";
+        // ss_ << prefix << "inline void " << pb_full_name_ << "::" <<aname << "::Clear() { count=0;}\n";
+        
+        ss_ << prefix << "inline bool " << pb_full_name_ << "::" <<aname << "::To("<< pb_full_name_.substr(3)<<"* msg_) const{ \n";
+        ss_ << prefix << GlobalVar::indent << "msg_->mutable_" << name << "()->Clear();\n";
+        ss_ << prefix << GlobalVar::indent << "for (size_t i = 0; i < count; ++i)\n";
+        ss_ << prefix << GlobalVar::indent << "{\n";
+        if(type_message->msg_type == MSG_TYPE::SIMPLE || type_message->msg_type == MSG_TYPE::ENUM){
+            ss_ << prefix << GlobalVar::indent << GlobalVar::indent << "msg_->add_" << name << "(data[i]);\n";
+        }
+        else{
+            ss_ << prefix << GlobalVar::indent << GlobalVar::indent << "if (!(data[i].To(msg_->mutable_" << name << "()->Add())"
+                << "))\n";
+            ss_ << prefix << GlobalVar::indent << GlobalVar::indent << GlobalVar::indent << "return false;\n";
+        }
+        ss_ << prefix << GlobalVar::indent << "}\n";
+        ss_ << prefix << GlobalVar::indent << "return true;\n";
+        ss_ << prefix << "}\n";
+
+        ss_ << prefix << "inline bool " << pb_full_name_ << "::" <<aname << "::From(const "<< pb_full_name_.substr(3)<<"& msg_) { \n";
+        ss_ << prefix << GlobalVar::indent << "if (msg_." << name << "_size() > count)\n";
+        ss_ << prefix << GlobalVar::indent << GlobalVar::indent << "count = _capcity;\n";
+        ss_ << prefix << GlobalVar::indent << "else\n";
+        ss_ << prefix << GlobalVar::indent << GlobalVar::indent << "count = msg_." << name << "_size();\n";
+        ss_ << prefix << GlobalVar::indent << "for (size_t i = 0; i < count; ++i)\n";
+        ss_ << prefix << GlobalVar::indent << "{\n";
+        if(type_message->msg_type == MSG_TYPE::SIMPLE || type_message->msg_type == MSG_TYPE::ENUM){
+            ss_ << prefix << GlobalVar::indent << GlobalVar::indent << "data[i] = msg_." << name << "(i);\n";
+        }
+        else{
+            ss_ << prefix << GlobalVar::indent << GlobalVar::indent << "if (!(data[i].From(msg_." << name << "(i))"
+                << "))\n";
+            ss_ << prefix << GlobalVar::indent << GlobalVar::indent << GlobalVar::indent << "return false;\n";
+        }
+        ss_ << prefix << GlobalVar::indent  << "}\n";
+        ss_ << prefix << GlobalVar::indent << "return true;\n";
+        
+        
+        ss_ << prefix << "}\n";
+
     }
 }
 
