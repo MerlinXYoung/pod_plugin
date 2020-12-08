@@ -1,11 +1,14 @@
 cmake_minimum_required (VERSION 2.6)
-
+project(TEST CXX)
 include(../common.cmake)
+list(APPEND CMAKE_PREFIX_PATH /usr/local/protobuf)
+# include(../protobuf.pod.cmake)
 
 # can use your own protobuf directory here
-SET(PROTOBUF_ROOT_DIR ${ROOT_DIR}/../third_party/protobuf)
-SET(PROTOBUF_DIR ${PROTOBUF_ROOT_DIR}/src)
-SET(PROTOC_TOOL ${PROTOBUF_DIR}/protoc)
+# SET(PROTOBUF_ROOT_DIR ${ROOT_DIR}/../third_party/protobuf)
+# SET(PROTOBUF_DIR ${PROTOBUF_ROOT_DIR}/src)
+# SET(PROTOC_TOOL ${PROTOBUF_DIR}/protoc)
+SET(PROTOC_TOOL ${Protobuf_PROTOC_EXECUTABLE})
 SET(PROTOBUF_LIB ${PROTOBUF_DIR}/.libs)
 
 # can use your own googletest directory here
@@ -19,6 +22,9 @@ SET(POD_LIB ${ROOT_DIR}/../lib)
 project(plugin_test)
 
 file(GLOB proto_file_list ${ROOT_DIR}/proto/*.proto)
+
+# PROTOBUF_GENERATE_POD_CPP(PROTO_SRCS PROTO_HDRS ${proto_file_list})
+
 foreach(proto_file ${proto_file_list})
     execute_process(COMMAND ${PROTOC_TOOL}
         --proto_path=${POD_PROTO}
